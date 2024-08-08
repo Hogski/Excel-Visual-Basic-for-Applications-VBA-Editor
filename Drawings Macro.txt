@@ -1,0 +1,104 @@
+Sub CopyAndFormatData()
+    Dim wsSource As Worksheet
+    Dim wsDest As Worksheet
+    Dim lastRowSource As Long
+    Dim lastRowDest As Long
+    Dim i As Long
+    Dim lastDayPreviousMonth As String
+    Dim csvFilePath As Variant
+    Dim sumColumnE As Double
+    Dim currentE1Value As Variant
+    
+    ' Set the source and destination worksheets
+    Set wsSource = ThisWorkbook.Sheets("SQL Extract")
+    Set wsDest = ThisWorkbook.Sheets("Drawings Upload")
+    
+    ' Find the last row with data in the source sheet
+    lastRowSource = wsSource.Cells(wsSource.Rows.Count, "D").End(xlUp).Row
+    
+    ' Clear the destination sheet before copying (except headers)
+    wsDest.Rows("2:" & wsDest.Rows.Count).ClearContents
+    
+    ' Copy the data from D2:E last row in source to D2:E in destination
+    wsSource.Range("D2:E" & lastRowSource).Copy Destination:=wsDest.Range("D2")
+    
+    ' Paste values only for column F from source to destination
+    wsDest.Range("F2:F" & lastRowSource).Value = wsSource.Range("F2:F" & lastRowSource).Value
+    
+    ' Find the last row with data in the destination sheet
+    lastRowDest = wsDest.Cells(wsDest.Rows.Count, "D").End(xlUp).Row
+    
+    ' Calculate the last day of the previous month
+    lastDayPreviousMonth = Format(DateSerial(Year(Date), Month(Date), 0), "dd/mm/yyyy")
+    
+    ' Populate column A with PreviousMonthRealloc()
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 1).Value = PreviousMonthRealloc()
+    Next i
+    
+    ' Populate column B with the last day of the previous month
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 2).Value = lastDayPreviousMonth
+    Next i
+    
+    ' Populate column C with value from D2
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 3).Value = wsDest.Cells(2, 4).Value
+    Next i
+    
+    ' Populate column G with "STANDARD"
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 7).Value = "STANDARD"
+    Next i
+    
+    ' Ensure column H is blank
+    wsDest.Range("H2:H" & lastRowDest).ClearContents
+    
+    ' Populate column I with a count of rows
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 9).Value = i - 1
+    Next i
+    
+    ' Calculate the sum of column E
+    sumColumnE = Application.WorksheetFunction.Sum(wsDest.Range("E2:E" & lastRowDest))
+    
+    ' Adjust cell E1 to make the sum of column E equal to 0 if necessary
+    currentE2Value = wsDest.Cells(2, 5).Value
+    If Not IsNumeric(currentE2Value) Then
+        currentE2Value = 0
+    End If
+    
+    If sumColumnE <> 0 Then
+        wsDest.Cells(2, 5).Value = currentE2Value - sumColumnE
+    End If
+    
+    ' Prompt the user to choose a file path to save the CSV file
+    csvFilePath = Application.GetSaveAsFilename( _
+        InitialFileName:="Drawings Upload.csv", _
+        FileFilter:="CSV Files (*.csv), *.csv", _
+        Title:="Save CSV File As")
+    
+    ' Check if the user cancelled the dialog
+    If csvFilePath = False Then
+        MsgBox "File save canceled.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Save the Drawings Upload sheet as a CSV file
+    wsDest.Copy
+    With ActiveWorkbook
+        .SaveAs Filename:=csvFilePath, FileFormat:=xlCSV, CreateBackup:=False
+        .Close SaveChanges:=False
+    End With
+    
+    ' Confirm the operation is complete
+    MsgBox "Data copied, formatted, and saved as CSV successfully.", vbInformation
+End Sub
+
+Function PreviousMonthRealloc() As String
+    Dim lastMonth As String
+    lastMonth = UCase(Format(DateSerial(Year(Date), Month(Date) - 1, 1), "MMMM"))
+    PreviousMonthRealloc = lastMonth & " RE-ALLOC"
+End Function
+
+

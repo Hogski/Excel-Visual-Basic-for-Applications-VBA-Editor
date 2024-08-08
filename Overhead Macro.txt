@@ -1,0 +1,141 @@
+Sub CopyAndFormatReallocationData()
+    Dim wsSource As Worksheet
+    Dim wsDest As Worksheet
+    Dim lastRowSource As Long
+    Dim lastRowDest As Long
+    Dim i As Long
+    Dim lastDayPreviousMonth As String
+    Dim csvFilePath As Variant
+    Dim sumColumnE As Double
+    Dim currentE1Value As Variant
+    Dim uniqueNames As Collection
+    Dim name As Variant
+    
+    ' Set the source and destination worksheets
+    On Error Resume Next
+    Set wsSource = ThisWorkbook.Sheets("SQL Extract")
+    Set wsDest = ThisWorkbook.Sheets("Re-allocation Upload")
+    On Error GoTo 0
+    
+    ' Check if sheets exist
+    If wsSource Is Nothing Then
+        MsgBox "Sheet 'SQL Extract' not found.", vbExclamation
+        Exit Sub
+    End If
+    
+    If wsDest Is Nothing Then
+        MsgBox "Sheet 'Re-allocation Upload' not found.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Find the last row with data in the source sheet
+    lastRowSource = wsSource.Cells(wsSource.Rows.Count, "D").End(xlUp).Row
+    
+    ' Clear the destination sheet before copying (except headers)
+    wsDest.Rows("2:" & wsDest.Rows.Count).ClearContents
+    
+    ' Copy the data from D2:E last row in source to D2:E in destination
+    wsSource.Range("D2:E" & lastRowSource).Copy Destination:=wsDest.Range("D2")
+    
+    ' Paste values only for column F from source to destination
+    wsDest.Range("F2:F" & lastRowSource).Value = wsSource.Range("F2:F" & lastRowSource).Value
+    
+    ' Remove all spaces in column F
+    For i = 2 To lastRowSource
+        wsDest.Cells(i, 6).Value = Replace(wsDest.Cells(i, 6).Value, " ", "")
+    Next i
+    
+    ' Find the last row with data in the destination sheet
+    lastRowDest = wsDest.Cells(wsDest.Rows.Count, "D").End(xlUp).Row
+    
+    ' Calculate the last day of the previous month
+    lastDayPreviousMonth = Format(Application.WorksheetFunction.EoMonth(Date, -1), "dd/mm/yyyy")
+    
+    ' Populate column A with PreviousMonthRealloc()
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 1).Value = PreviousMonthRealloc()
+    Next i
+    
+    ' Populate column B with the last day of the previous month
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 2).Value = lastDayPreviousMonth
+    Next i
+    
+    ' Populate column C with values from column D
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 3).Value = wsDest.Cells(i, 4).Value
+    Next i
+    
+    ' Populate column G with "STANDARD"
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 7).Value = "STANDARD"
+    Next i
+    
+    ' Ensure column H is blank
+    wsDest.Range("H2:H" & lastRowDest).ClearContents
+    
+    ' Populate column I with a count of rows
+    For i = 2 To lastRowDest
+        wsDest.Cells(i, 9).Value = i - 1
+    Next i
+    
+    ' Get unique names from column D
+    Set uniqueNames = New Collection
+    On Error Resume Next
+    For i = 2 To lastRowDest
+        uniqueNames.Add wsDest.Cells(i, 4).Value, CStr(wsDest.Cells(i, 4).Value)
+    Next i
+    On Error GoTo 0
+    
+    ' Adjust column E sums for each unique name in column D
+    For Each name In uniqueNames
+        sumColumnE = 0
+        currentE1Value = wsDest.Cells(1, 5).Value
+        If Not IsNumeric(currentE1Value) Then
+            currentE1Value = 0
+        End If
+        For i = 2 To lastRowDest
+            If wsDest.Cells(i, 4).Value = name Then
+                sumColumnE = sumColumnE + wsDest.Cells(i, 5).Value
+            End If
+        Next i
+        If sumColumnE <> 0 Then
+            For i = 2 To lastRowDest
+                If wsDest.Cells(i, 4).Value = name Then
+                    wsDest.Cells(i, 5).Value = wsDest.Cells(i, 5).Value - sumColumnE
+                    Exit For
+                End If
+            Next i
+        End If
+    Next name
+    
+    ' Prompt the user to choose a file path to save the CSV file
+    csvFilePath = Application.GetSaveAsFilename( _
+        InitialFileName:="Re-allocation Upload.csv", _
+        FileFilter:="CSV Files (*.csv), *.csv", _
+        Title:="Save CSV File As")
+    
+    ' Check if the user canceled the dialog
+    If csvFilePath = False Then
+        MsgBox "File save canceled.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Save the Re-allocation Upload sheet as a CSV file
+    wsDest.Copy
+    With ActiveWorkbook
+        .SaveAs Filename:=csvFilePath, FileFormat:=xlCSV, CreateBackup:=False
+        .Close SaveChanges:=False
+    End With
+    
+    ' Confirm the operation is complete
+    MsgBox "Data copied, formatted, and saved as CSV successfully.", vbInformation
+End Sub
+
+Function PreviousMonthRealloc() As String
+    Dim lastMonth As String
+    lastMonth = UCase(Format(DateSerial(Year(Date), Month(Date) - 1, 1), "MMMM"))
+    PreviousMonthRealloc = lastMonth & " RE-ALLOC"
+End Function
+
+

@@ -1,0 +1,167 @@
+Sub ExtractFiguresFromCSVFolder()
+    Dim folderPath As String
+    Dim fileName As String
+    Dim csvWb As Workbook
+    Dim csvWs As Worksheet
+    Dim summarySheet As Worksheet
+    Dim currentRow As Long
+    Dim cell As Range
+    Dim value860 As Double
+    Dim value861 As Double
+    Dim value862 As Double
+    Dim found860 As Boolean
+    Dim found861 As Boolean
+    Dim found862 As Boolean
+    Dim lastRow As Long
+
+    ' Prompt for the folder path
+    With Application.FileDialog(msoFileDialogFolderPicker)
+        .Title = "Select Folder"
+        .Show
+        If .SelectedItems.Count = 0 Then Exit Sub
+        folderPath = .SelectedItems(1) & "\"
+    End With
+    
+    ' Create or activate the "Summary" sheet
+    On Error Resume Next
+    Set summarySheet = ThisWorkbook.Sheets("Summary")
+    On Error GoTo 0
+    If summarySheet Is Nothing Then
+        Set summarySheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        summarySheet.Name = "Summary"
+    Else
+        summarySheet.Cells.Clear
+    End If
+
+    ' Define headers
+    With summarySheet
+        .Range("A1").Value = "Filename"
+        .Range("B1").Value = "IOM"
+        .Range("C1").Value = "JERSEY"
+        .Range("D1").Value = "GUERNSEY"
+    End With
+
+    ' Initialize row for data entry
+    currentRow = 2
+
+    ' Loop through each CSV file in the folder
+    fileName = Dir(folderPath & "*.csv")
+    Do While fileName <> ""
+        ' Import CSV data into a temporary worksheet
+        Set csvWb = Workbooks.Open(folderPath & fileName)
+        Set csvWs = csvWb.Sheets(1)
+        
+        ' Initialize values
+        value860 = 0
+        value861 = 0
+        value862 = 0
+        found860 = False
+        found861 = False
+        found862 = False
+        
+        ' Loop through each row in the temporary worksheet
+        lastRow = csvWs.Cells(csvWs.Rows.Count, "A").End(xlUp).Row
+        For Each cell In csvWs.Range("A1:A" & lastRow)
+            If cell.Value = 860 Then
+                value860 = cell.Offset(0, 4).Value
+                found860 = True
+            ElseIf cell.Value = 861 Then
+                value861 = cell.Offset(0, 4).Value
+                found861 = True
+            ElseIf cell.Value = 862 Then
+                value862 = cell.Offset(0, 4).Value
+                found862 = True
+            End If
+        Next cell
+        
+        ' Output the values to the summary sheet
+        summarySheet.Cells(currentRow, 1).Value = fileName
+        If found860 Then summarySheet.Cells(currentRow, 2).Value = value860
+        If found861 Then summarySheet.Cells(currentRow, 3).Value = value861
+        If found862 Then summarySheet.Cells(currentRow, 4).Value = value862
+        
+        ' Close the CSV workbook without saving
+        csvWb.Close SaveChanges:=False
+        
+        fileName = Dir
+        currentRow = currentRow + 1
+    Loop
+    
+    ' Divide specified cells by 100
+    DivideCellsBy100 summarySheet
+
+    ' Add and outline the specified text
+    AddAndOutlineText summarySheet
+
+    ' Add the specified formulas
+    AddFormulas summarySheet
+End Sub
+
+Sub DivideCellsBy100(sheet As Worksheet)
+    Dim rng As Range
+    Dim cell As Range
+    
+    ' Define the ranges to divide by 100
+    Set rng = Union(sheet.Range("B2:B12"), sheet.Range("C2:C12"), sheet.Range("D2:D12"), sheet.Range("B14"), sheet.Range("C14"), sheet.Range("D14"))
+    
+    ' Loop through each cell in the range and divide by 100
+    For Each cell In rng
+        If IsNumeric(cell.Value) Then
+            cell.Value = cell.Value / 100
+        End If
+    Next cell
+End Sub
+
+Sub AddAndOutlineText(sheet As Worksheet)
+    ' Add and outline the specified text
+    With sheet
+        .Range("H4").Formula = "=B1"
+        .Range("I4").Formula = "=C1"
+        .Range("J4").Formula = "=D1"
+        .Range("G5").Value = "CDIV"
+        .Range("G6").Value = "ADIV"
+        .Range("G7").Value = "Bluestem"
+        .Range("G8").Value = "Tamlite"
+        .Range("G9").Value = "Brencham"
+    End With
+    
+    ' Outline the cells
+    OutlineCell sheet.Range("H4")
+    OutlineCell sheet.Range("I4")
+    OutlineCell sheet.Range("J4")
+    OutlineCell sheet.Range("G5")
+    OutlineCell sheet.Range("G6")
+    OutlineCell sheet.Range("G7")
+    OutlineCell sheet.Range("G8")
+    OutlineCell sheet.Range("G9")
+End Sub
+
+Sub OutlineCell(cell As Range)
+    With cell.Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .ColorIndex = xlAutomatic
+    End With
+End Sub
+
+Sub AddFormulas(sheet As Worksheet)
+    ' Add the specified formulas
+    With sheet
+        .Range("H5").Formula = "=SUM(B2:B4)+B6+B10"
+        .Range("I5").Formula = "=SUM(C2:C4)+C6+C10"
+        .Range("J5").Formula = "=SUM(D2:D4)+D6+D10"
+        .Range("H6").Formula = "=B5+B9+B11+B12+B14+B15+B25"
+        .Range("I6").Formula = "=C5+C9+C11+C12+C14+C15+C25"
+        .Range("J6").Formula = "=D5+D9+D11+D12+D14+D15+D25"
+        .Range("H7").Formula = "=B7"
+        .Range("I7").Formula = "=C7"
+        .Range("J7").Formula = "=D7"
+        .Range("H8").Formula = "=B13+B16+B17+B18+B19"
+        .Range("I8").Formula = "=C13+SUM(C16:C19)"
+        .Range("J8").Formula = "=D13+SUM(D16:D19)"
+        .Range("H9").Formula = "=SUM(B20:B24)+B27"
+        .Range("I9").Formula = "=SUM(C20:C24)+C27"
+        .Range("J9").Formula = "=SUM(D20:D24)+D27"
+    End With
+End Sub
+

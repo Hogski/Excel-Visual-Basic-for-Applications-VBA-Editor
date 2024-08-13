@@ -1,0 +1,198 @@
+Sub GenerateAssetData()
+
+    ' Step 1: Check for N/A in the DATA tab
+    Dim wsData As Worksheet
+    Set wsData = ThisWorkbook.Sheets("DATA")
+    
+    Dim cell As Range
+    For Each cell In wsData.UsedRange
+        If IsError(cell.Value) Then
+            If cell.Value = CVErr(xlErrNA) Then
+                MsgBox "N/A found in DATA tab. Please paste your original data as values only.", vbCritical
+                Exit Sub
+            End If
+        End If
+    Next cell
+    
+    ' Step 2: Ask for the asset number to start on
+    Dim assetNumber As Long
+    assetNumber = Application.InputBox("Enter the starting asset number:", Type:=1)
+    If assetNumber = 0 Then Exit Sub
+    
+    ' Step 3: Fill in asset numbers in column B starting from B2
+    Dim lastRow As Long
+    lastRow = wsData.Cells(wsData.Rows.Count, "C").End(xlUp).Row
+    
+    wsData.Range("A2:A" & lastRow).Formula = "=ROW()-1"
+    wsData.Range("B2:B" & lastRow).Formula = "=TEXT(" & assetNumber & "+ROW()-2, ""000000000000000"")"
+    wsData.Range("B2:B" & lastRow).DataSeries Rowcol:=xlColumns, Type:=xlLinear, Step:=1, Stop:=assetNumber + lastRow - 2, Trend:=False
+    
+    ' Step 4: Fill formulas in GENERAL, BOOK, and USER tabs
+    Dim wsGeneral As Worksheet
+    Dim wsBook As Worksheet
+    Dim wsUser As Worksheet
+    
+    Set wsGeneral = ThisWorkbook.Sheets("GENERAL")
+    Set wsBook = ThisWorkbook.Sheets("BOOK")
+    Set wsUser = ThisWorkbook.Sheets("USER")
+    
+    ' Convert Column I to date format before any other operations
+    wsData.Range("F2:F" & lastRow).NumberFormat = "mm/dd/yyyy"
+    wsGeneral.Range("I2:I" & lastRow).NumberFormat = "mm/dd/yyyy"
+    wsBook.Range("D2:D" & lastRow).NumberFormat = "mm/dd/yyyy"
+    wsBook.Range("E2:E" & lastRow).NumberFormat = "mm/dd/yyyy"
+    wsBook.Range("F2:F" & lastRow).NumberFormat = "0.00"
+    wsGeneral.Range("J2:J" & lastRow).NumberFormat = "0.00"
+    
+    ' GENERAL tab formulas
+    wsGeneral.Range("A2:A" & lastRow).Formula = "=IF(DATA!A2<>"""", DATA!A2, """")"
+    wsGeneral.Range("B2:B" & lastRow).Formula = "=IF(DATA!B2<>"""", DATA!B2, """")"
+    wsGeneral.Range("C2:C" & lastRow).Formula = "=IF(DATA!K2<>"""", DATA!K2, """")"
+    wsGeneral.Range("D2:D" & lastRow).Formula = "=IF(DATA!L2<>"""", DATA!L2, """")"
+    wsGeneral.Range("E2:E" & lastRow).Formula = "=IF(DATA!I2<>"""", DATA!I2, """")"
+    wsGeneral.Range("F2:F" & lastRow).Formula = "=IF(DATA!E2<>"""", DATA!E2, """")"
+    wsGeneral.Range("G2:G" & lastRow).Formula = "=IF(DATA!E2<>"""", DATA!E2, """")"
+    wsGeneral.Range("H2:H" & lastRow).Formula = "=IF(DATA!C2<>"""", DATA!C2, """")"
+    wsGeneral.Range("I2:I" & lastRow).Formula = "=IF(DATA!F2<>"""", DATA!F2, """")"
+    wsGeneral.Range("J2:J" & lastRow).Formula = "=IF(DATA!R2<>"""", DATA!R2, """")"
+    wsGeneral.Range("K2:K" & lastRow).Formula = "=IF(DATA!G2<>"""", DATA!G2, """")"
+    wsGeneral.Range("N2:N" & lastRow).Formula = "=IF(DATA!O2<>"""", DATA!O2, """")"
+    wsGeneral.Range("O2:O" & lastRow).Formula = "=IF(DATA!D2<>"""", DATA!D2, """")"
+    wsGeneral.Range("P2:P" & lastRow).Formula = "=IF(DATA!N2<>"""", DATA!N2, """")"
+    wsGeneral.Range("Q2:Q" & lastRow).Formula = "=TODAY()"
+    
+    ' BOOK tab formulas
+    wsBook.Range("A2:A" & lastRow).Formula = "=GENERAL!A2"
+    wsBook.Range("B2:B" & lastRow).Formula = "=GENERAL!B2"
+    wsBook.Range("C2:C" & lastRow).Formula = "=IF(A2<>"""", ""HO-FIN"", """")"
+    wsBook.Range("D2:D" & lastRow).Formula = "=GENERAL!I2"
+    wsBook.Range("E2:E" & lastRow).Formula = "=D2"
+    wsBook.Range("F2:F" & lastRow).Formula = "=GENERAL!J2"
+    wsBook.Range("G2:G" & lastRow).Formula = "=IF(A2<>"""", ""0"", """")"
+    wsBook.Range("H2:H" & lastRow).Formula = "=IF(A2<>"""", ""0"", """")"
+    wsBook.Range("I2:I" & lastRow).Formula = "=IF(A2<>"""", ""0"", """")"
+    wsBook.Range("J2:J" & lastRow).Formula = "=IF(A2<>"""", ""Straight-Line Orig Life"", """")"
+    wsBook.Range("K2:K" & lastRow).Formula = "=IF(A2<>"""", ""Full Month"", """")"
+    wsBook.Range("L2:L" & lastRow).Formula = "=IF(A2<>"""", ""No Switch"", """")"
+    wsBook.Range("M2:M" & lastRow).Formula = "=IF(DATA!M2<>"""", DATA!M2, """")"
+    wsBook.Range("N2:N" & lastRow).Formula = "=IF(A2<>"""", ""0"", """")"
+    wsBook.Range("O2:O" & lastRow).Formula = "=GENERAL!Q2"
+    
+    ' USER tab formulas
+    wsUser.Range("A2:A" & lastRow).Formula = "=GENERAL!A2"
+    wsUser.Range("B2:B" & lastRow).Formula = "=GENERAL!B2"
+    wsUser.Range("C2:C" & lastRow).Formula = "=GENERAL!F2"
+    wsUser.Range("D2:D" & lastRow).Formula = "=TEXT(IF(DATA!Q2<>"""", DATA!Q2, """"), ""000"")"
+    wsUser.Range("E2:E" & lastRow).Formula = "=IF(DATA!H2<>"""", DATA!H2, """")"
+    wsUser.Range("F2:F" & lastRow).Formula = "=IF(DATA!J2<>"""", DATA!J2, """")"
+    
+End Sub
+
+Function GetUniqueFileName(filePath As String) As String
+    Dim baseName As String
+    Dim fileExtension As String
+    Dim i As Integer
+    Dim uniqueFilePath As String
+    
+    ' Split the filePath into base name and extension
+    baseName = Left(filePath, InStrRev(filePath, ".") - 1)
+    fileExtension = Mid(filePath, InStrRev(filePath, "."))
+    
+    ' Initialize the unique file path as the original
+    uniqueFilePath = filePath
+    
+    ' Check if the file already exists, and if so, append a number
+    i = 1
+    Do While Dir(uniqueFilePath) <> ""
+        uniqueFilePath = baseName & "_" & i & fileExtension
+        i = i + 1
+    Loop
+    
+    GetUniqueFileName = uniqueFilePath
+End Function
+
+
+Sub SaveSheetsAsCSV()
+    Dim wsGeneral As Worksheet
+    Dim wsBook As Worksheet
+    Dim wsUser As Worksheet
+    Dim yearFolderPath As String
+    Dim monthFolderPath As String
+    Dim fileName As String
+    Dim currentYear As String
+    Dim currentMonth As String
+    Dim response As VbMsgBoxResult
+    Dim savedFiles As String
+    
+    ' Disable screen updating
+    Application.ScreenUpdating = False
+    
+    ' Set references to the worksheets
+    Set wsGeneral = ThisWorkbook.Sheets("GENERAL")
+    Set wsBook = ThisWorkbook.Sheets("BOOK")
+    Set wsUser = ThisWorkbook.Sheets("USER")
+    
+    ' Get the current year and month as full name
+    currentYear = Format(Date, "yyyy")
+    currentMonth = Format(Date, "mmmm")
+    
+    ' Define the folder paths
+    yearFolderPath = "Y:\`Documentation\Month End Tasks\HO Asset Refresh\" & currentYear
+    monthFolderPath = yearFolderPath & "\" & currentMonth
+    
+    ' Check if the year folder exists
+    If Dir(yearFolderPath, vbDirectory) = "" Then
+        response = MsgBox("The year folder '" & yearFolderPath & "' does not exist. Do you want to create it?", vbYesNo + vbQuestion)
+        If response = vbYes Then
+            MkDir yearFolderPath
+        Else
+            MsgBox "Operation cancelled. Year folder not created.", vbExclamation
+            Exit Sub
+        End If
+    End If
+    
+    ' Check if the month folder exists
+    If Dir(monthFolderPath, vbDirectory) = "" Then
+        response = MsgBox("The month folder '" & monthFolderPath & "' does not exist. Do you want to create it?", vbYesNo + vbQuestion)
+        If response = vbYes Then
+            MkDir monthFolderPath
+        Else
+            MsgBox "Operation cancelled. Month folder not created.", vbExclamation
+            Exit Sub
+        End If
+    End If
+    
+    ' Save GENERAL sheet as CSV with unique file name
+    fileName = GetUniqueFileName(monthFolderPath & "\GENERAL.csv")
+    wsGeneral.Copy
+    ActiveWorkbook.SaveAs fileName:=fileName, FileFormat:=xlCSV, CreateBackup:=False
+    ActiveWorkbook.Close SaveChanges:=False
+    savedFiles = savedFiles & fileName & vbCrLf
+    
+    ' Save BOOK sheet as CSV with unique file name
+    fileName = GetUniqueFileName(monthFolderPath & "\BOOK.csv")
+    wsBook.Copy
+    ActiveWorkbook.SaveAs fileName:=fileName, FileFormat:=xlCSV, CreateBackup:=False
+    ActiveWorkbook.Close SaveChanges:=False
+    savedFiles = savedFiles & fileName & vbCrLf
+    
+    ' Save USER sheet as CSV with unique file name
+    fileName = GetUniqueFileName(monthFolderPath & "\USER.csv")
+    wsUser.Copy
+    ActiveWorkbook.SaveAs fileName:=fileName, FileFormat:=xlCSV, CreateBackup:=False
+    ActiveWorkbook.Close SaveChanges:=False
+    savedFiles = savedFiles & fileName & vbCrLf
+    
+    ' Re-enable screen updating
+    Application.ScreenUpdating = True
+    
+    ' Display message with the paths of saved files
+    MsgBox "Files saved successfully in the following locations:" & vbCrLf & savedFiles, vbInformation
+End Sub
+
+
+
+
+
+
+
